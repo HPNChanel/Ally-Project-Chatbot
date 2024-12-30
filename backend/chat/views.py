@@ -8,6 +8,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
 from django.core.cache import cache
+import requests
+from django.conf import settings
 
 class RegisterAPI(APIView):
   def post(self, request):
@@ -25,12 +27,14 @@ class LoginAPI(APIView):
   def post(self, request):
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-      username = serializer.validated_data['username']
-      password = serializer.validated_data['password']
-      user = authenticate(username=username, password=password)
-      if user:
-        return Response({"message": "Login successful"}, status=status.HTTP_200_OK)
-      return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+      tokens = serializer.validated_data
+      return Response(
+        {
+          "message": "Login successful",
+          "refresh_token": tokens['refresh'],
+          "access_token": tokens['access']
+        }  
+      )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserProfileAPI(APIView):
@@ -75,8 +79,29 @@ class ChatHistoryAPI(ListAPIView):
   def post(self, request):
     serializer = ChatHistorySerializer(data=request.data)
     if serializer.is_valid():
-      serializer.save(user=request.user)
+      user_message = serializer.save(user=request.user)
     
+      ai_url = f"{settings.BASE_URL}/api/ai/gpt4/"
+      
+      try:
+        ai_response = requests.post(
+          ai_url,
+          json={"message": user_message.message},
+          headers={"Authorization": f"Bearer {request.auth.token}"}
+        )
+        if ai_response.status_code == 200:
+          bot_response = ai_response.json().get("response", "AI is not available")
+        else:
+          bot_response = "AI service returned an error."
+      except Exception as e:
+        bot_response = "Failed to connect to AI service."
+      
+      #* Save chatbot's response
+      ChatHistory.objects.create(
+        user=request.user,
+        message=bot_response,
+        is_bot=True
+      )
       #* Delete cache if it has new data
       cache_key = f"chat_history_user_{request.user.id}"
       cache.delete(cache_key)

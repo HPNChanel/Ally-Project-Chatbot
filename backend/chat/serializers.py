@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import CustomUser, UserProfile, ChatHistory
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
 
 class RegisterSerializer(serializers.ModelSerializer):
   password = serializers.CharField(write_only=True)  #* `write_only: only write, cannot read`
@@ -21,6 +23,21 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
   username = serializers.CharField(required=True)
   password = serializers.CharField(write_only=True, required=True)
+  
+  def validate(self, data):
+    username = data.get("username")
+    password = data.get("password")
+    
+    user = authenticate(username=username, password=password)
+    if not user:
+      raise serializers.ValidationError("Invalid credentials")
+    
+    #* Create token
+    refresh = RefreshToken.for_user(user)
+    return {
+      'refresh': str(refresh),
+      'access': str(refresh.access_token)
+    }
 
 class UserProfileSerializer(serializers.ModelSerializer):
   class Meta:

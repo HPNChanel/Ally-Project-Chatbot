@@ -54,3 +54,11 @@ class ChatHistory(models.Model):
   def __str__(self):
     return f"{self.user.username} - {'Bot' if self.is_bot else 'User'}: {self.message[:30]}"
   
+class UserSettings(models.Model):
+  user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+  reminders_enabled = models.BooleanField(default=True)
+  reminder_time = models.TimeField(null=True, blank=True)  #* Reminder time
+  reminder_message = models.TextField(default="Don't forget to take a break!")  #* Content of reminder
+  
+  def __str__(self):
+    return f"Settings for {self.user.username}"
