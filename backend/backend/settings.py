@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'chat',
     'rest_framework',
     'ai',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -74,6 +75,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 AUTH_USER_MODEL = 'chat.CustomUser'
+
+CELERY_BROKER_URL = 'redis://localhost:6380/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases

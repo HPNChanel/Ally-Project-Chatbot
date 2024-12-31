@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, UserProfile, ChatHistory
+from .models import CustomUser, UserProfile, ChatHistory, UserSettings
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 
@@ -56,3 +56,9 @@ class ChatHistorySerializer(serializers.ModelSerializer):
   class Meta:
     model = ChatHistory
     fields = ['id', 'message', 'is_bot', 'timestamp']
+
+class UserSettingsSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = UserSettings
+    fields = ['reminders_enabled', 'reminder_time', 'reminder_message']
+    

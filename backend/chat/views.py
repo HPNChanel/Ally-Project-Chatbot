@@ -1,9 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChatHistorySerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChatHistorySerializer, UserSettingsSerializer
 from django.contrib.auth import authenticate
-from .models import UserProfile, ChatHistory
+from .models import UserProfile, ChatHistory, UserSettings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.generics import ListAPIView
@@ -107,5 +107,21 @@ class ChatHistoryAPI(ListAPIView):
       cache.delete(cache_key)
 
       return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserSettingsAPI(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def get(self, request):
+    settings, created = UserSettings.objects.get_or_create(user=request.user)
+    serializer = UserSettingsSerializer(settings)
+    return Response(serializer.data)
+  
+  def put(self, request):
+    settings, created = UserSettings.objects.get_or_create(user=request.user)
+    serializer = UserSettingsSerializer(settings, data=request.data)
+    if serializer.is_valid():
+      serializer.save()
+      return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
