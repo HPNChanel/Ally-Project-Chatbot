@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChatHistorySerializer, UserSettingsSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserProfileSerializer, ChatHistorySerializer, UserSettingsSerializer, UpdateUserSerializer
 from django.contrib.auth import authenticate
 from .models import UserProfile, ChatHistory, UserSettings
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +10,8 @@ from rest_framework.generics import ListAPIView
 from django.core.cache import cache
 import requests
 from django.conf import settings
+import csv
+from django.http import HttpResponse
 
 class RegisterAPI(APIView):
   def post(self, request):
@@ -124,4 +126,71 @@ class UserSettingsAPI(APIView):
       serializer.save()
       return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AnalyticsAPI(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def get(self, request):
+    user = request.user
     
+    #* Count the amount of messages
+    total_messages = ChatHistory.objects.filter(user=user).count()
+    bot_messages = ChatHistory.objects.filter(user=user, is_bot=True).count()
+    user_messages = total_messages - bot_messages
+    
+    return Response({
+      "total_messages": total_messages,
+      "user_messages": user_messages,
+      "bot_messages": bot_messages
+    })
+
+class DownloadChatHistoryAPI(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def get(self, request):
+    user = request.user
+    chats = ChatHistory.objects.filter(user=user).order_by("timestamp")
+    
+    #* Create CSV file
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="chat_history.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Timestamp', 'Message', 'Is Bot'])
+    
+    for chat in chats:
+      writer.writerow([chat.timestamp, chat.message, chat.is_bot])
+    
+    return response
+
+class ChangePasswordAPI(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def post(self, request):
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+    
+    if not request.user.check_password(old_password):
+      return Response({"error": "Old password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    request.user.set_password(new_password)
+    request.user.save()
+    return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
+
+class UpdateUserAPI(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def put(self, request):
+    serializer = UpdateUserSerializer(request.user, data=request.data, partial=True)
+    if serializer.is_valid():
+      serializer.save()
+      return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class DeleteAccountAPI(APIView):
+  permission_classes = [IsAuthenticated]
+  
+  def delete(self, request):
+    user = request.user
+    user.delete()
+    return Response({"message": "Account deleted successfully"}, status=status.HTTP_200_OK)
+  

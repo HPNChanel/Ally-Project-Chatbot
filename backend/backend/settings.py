@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'ai',
     'django_celery_beat',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -73,6 +74,7 @@ TEMPLATES = [
     },
 ]
 
+ASGI_APPLICATION = 'backend.asgi.application'
 WSGI_APPLICATION = 'backend.wsgi.application'
 AUTH_USER_MODEL = 'chat.CustomUser'
 
@@ -123,6 +125,12 @@ CACHES = {
         },
         'KEY_PREFIX': 'chatbot_cache'  
     }
+}
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    },
 }
 
 SIMPLE_JWT = {

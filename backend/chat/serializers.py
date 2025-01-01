@@ -61,4 +61,8 @@ class UserSettingsSerializer(serializers.ModelSerializer):
   class Meta:
     model = UserSettings
     fields = ['reminders_enabled', 'reminder_time', 'reminder_message']
-    
+
+class UpdateUserSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = CustomUser
+    fields = ['full_name', 'email', 'username']
